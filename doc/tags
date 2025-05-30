@@ -1,0 +1,14 @@
+line.txt	*line.txt*	A minimal, performant, and beautiful Neovim statusline plugin
+line.txt	*line-introduction*	line.txt
+line.txt	*line-requirements*	line.txt
+line.txt	*line-installation*	line.txt
+line.txt	*line-configuration*	line.txt
+line.txt	*line-options*	line.txt
+line.txt	*line-root_markers*	line.txt
+line.txt	*line-lsp-ignored_clients*	line.txt
+line.txt	*line-components*	line.txt
+line.txt	*line-icons*	line.txt
+line.txt	*line-colors*	line.txt
+line.txt	*line-performance*	line.txt
+line.txt	*line-types*	line.txt
+line.txt	*line-license*	line.txt 

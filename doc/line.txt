@@ -1,0 +1,161 @@
+*line.txt*	A minimal, performant, and beautiful Neovim statusline plugin
+
+==============================================================================
+INTRODUCTION						*line-introduction*
+
+line.nvim is a minimal, performant, and beautiful Neovim statusline plugin
+written in pure Lua. It provides a modern and cohesive statusline with built-in
+LSP status, diagnostic counts, git information, and more.
+
+==============================================================================
+REQUIREMENTS						*line-requirements*
+
+- Neovim >= 0.11.0
+
+==============================================================================
+INSTALLATION						*line-installation*
+
+With lazy.nvim, add this to your `lua/plugins/line.lua`:
+
+```lua
+return {
+  "sadiksaifi/line.nvim",
+  opts = {}, -- or your custom options below
+}
+```
+
+Note: With lazy.nvim, the `opts` table is automatically passed to the plugin's
+`setup()` function. You do not need to call `setup()` manually.
+
+==============================================================================
+CONFIGURATION						*line-configuration*
+
+You can override any option by passing it in the `opts` table. Here are all
+available options with their default values:
+
+```lua
+return {
+  "sadiksaifi/line.nvim",
+  opts = {
+    -- Project root detection
+    root_markers = {
+      ".git", ".vscode", ".editorconfig", "package.json", "deno.json",
+      "pyproject.toml", "Cargo.toml", "go.mod", "composer.json", "Gemfile",
+    },
+
+    -- LSP configuration
+    lsp = {
+      ignored_clients = { "null-ls", "eslint" },
+    },
+
+    -- Statusline components (enable/disable)
+    components = {
+      mode = true,         -- Show current mode
+      file_path = true,    -- Show file path
+      lsp = true,          -- Show LSP status
+      diagnostics = true,  -- Show diagnostics
+      git = true,          -- Show git branch
+    },
+
+    -- Icons (can be overridden)
+    icons = {
+      error = "󰅚",   -- Error diagnostic icon
+      warn  = "󰋽",   -- Warning diagnostic icon
+      git   = " ",  -- Git branch icon
+    },
+
+    -- Colors (all can be overridden)
+    colors = {
+      statusline = { fg = "#c0caf5", bg = "#303038" },
+      normal     = { fg = "#24283b", bg = "#a2d2fb" },
+      insert     = { fg = "#24283b", bg = "#9ece6a" },
+      visual     = { fg = "#24283b", bg = "#bb9af7" },
+      replace    = { fg = "#24283b", bg = "#f7768e" },
+      command    = { fg = "#24283b", bg = "#e0af68" },
+      select     = { fg = "#24283b", bg = "#7dcfff" },
+      shell      = { fg = "#24283b", bg = "#7aa2f7" },
+      terminal   = { fg = "#24283b", bg = "#7aa2f7" },
+      file       = { fg = "#c0caf5", bg = "#303038" },
+      diagnostic_error = { fg = "#f7768e", bg = "#303038" },
+      diagnostic      = { fg = "#e0af68", bg = "#303038" },
+      lsp        = { fg = "#a2d2fb", bg = "#303038" },
+      git        = { fg = "#a2d2fb", bg = "#303038" },
+      extension  = { fg = "#24283b", bg = "#a2d2fb" },
+      separator  = { fg = "#c0caf5", bg = "#303038" },
+    },
+  },
+}
+```
+
+==============================================================================
+OPTIONS							*line-options*
+
+root_markers					*line-root_markers*
+	List of files/directories to detect the project root.
+
+lsp.ignored_clients				*line-lsp-ignored_clients*
+	LSP client names to ignore in the statusline.
+	Default: `null-ls`, `eslint`
+
+components						*line-components*
+	Enable/disable each statusline section. All enabled by default:
+	- mode: Show current mode
+	- file_path: Show file path
+	- lsp: Show LSP status
+	- diagnostics: Show diagnostics
+	- git: Show git branch
+
+icons							*line-icons*
+	Unicode icons for various components:
+	- error: Error diagnostic icon
+	- warn: Warning diagnostic icon
+	- git: Git branch icon
+
+colors							*line-colors*
+	All highlight groups can be overridden. See the configuration section
+	above for the complete list of available colors.
+
+==============================================================================
+COMPONENTS						*line-components*
+
+Left Side:
+- Current mode (using built-in Neovim mode names)
+- File path relative to project root
+
+Right Side:
+- LSP status (spinner while loading, client names when ready)
+- Diagnostic counts with icons (errors/warnings)
+- Git branch information
+
+==============================================================================
+PERFORMANCE						*line-performance*
+
+The plugin is designed to be performant with minimal flickering:
+- Only updates on actual changes
+- Uses efficient event handling
+- Avoids unnecessary redraws
+- Caches project root detection
+- Efficient LSP state tracking
+
+==============================================================================
+TYPES							*line-types*
+
+All options are fully typed for LSP/autocomplete support.
+You can import the types from `require('line.types')` in your config for better
+editor hints.
+
+Example:
+```lua
+---@type require('line.types').LineConfig
+local config = {
+  -- your config here
+}
+```
+
+==============================================================================
+LICENSE							*line-license*
+
+MIT License
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl: 

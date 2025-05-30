@@ -2,6 +2,8 @@
 
 A minimal, performant, and beautiful Neovim statusline plugin written in pure Lua.
 
+![line.nvim](https://github.com/user-attachments/assets/8062e940-88a1-4566-b8f6-315855c625e9)
+
 ## Features
 
 - Minimal and fast statusline implementation

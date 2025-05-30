@@ -97,7 +97,7 @@ lsp.ignored_clients				*line-lsp-ignored_clients*
 	LSP client names to ignore in the statusline.
 	Default: `null-ls`, `eslint`
 
-components						*line-components*
+components						*line-components-options*
 	Enable/disable each statusline section. All enabled by default:
 	- mode: Show current mode
 	- file_path: Show file path
@@ -116,7 +116,7 @@ colors							*line-colors*
 	above for the complete list of available colors.
 
 ==============================================================================
-COMPONENTS						*line-components*
+COMPONENTS						*line-components-overview*
 
 Left Side:
 - Current mode (using built-in Neovim mode names)

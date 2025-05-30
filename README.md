@@ -16,7 +16,7 @@ A minimal, performant, and beautiful Neovim statusline plugin written in pure Lu
 
 - Neovim >= 0.11.0
 
-## Installation (with lazy.nvim)
+## Installation (with lazy.nvim preffered)
 
 Add this to your `lua/plugins/line.lua` (or wherever you keep your lazy.nvim specs):
 

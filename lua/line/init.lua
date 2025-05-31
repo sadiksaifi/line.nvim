@@ -196,8 +196,18 @@ end
 
 local function on_lsp_attach(client)
   if not vim.tbl_contains(state.config.lsp.ignored_clients, client.name) then
-    table.insert(state.lsp_clients, client.name)
-    vim.cmd("redrawstatus")
+    -- Check if client is already in the list
+    local exists = false
+    for _, name in ipairs(state.lsp_clients) do
+      if name == client.name then
+        exists = true
+        break
+      end
+    end
+    if not exists then
+      table.insert(state.lsp_clients, client.name)
+      vim.cmd("redrawstatus")
+    end
   end
 end
 

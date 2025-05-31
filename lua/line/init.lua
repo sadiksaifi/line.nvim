@@ -180,11 +180,15 @@ end
 local function get_extension_badge()
   local bufname = vim.api.nvim_buf_get_name(0)
   if bufname == "" then
-    return ""
+    local buftype = vim.bo.buftype
+    if buftype ~= "" then
+      return string.format("%%#LineExtension# %s %%#LineStatusline#", buftype)
+    end
+    return string.format("%%#LineExtension#[No Name]%%#LineStatusline#")
   end
   local ext = vim.fn.fnamemodify(bufname, ":e")
   if ext == "" then
-    return ""
+    return string.format("%%#LineExtension#[No Name]%%#LineStatusline#")
   end
   return string.format("%%#LineExtension# %s %%#LineStatusline#", ext)
 end

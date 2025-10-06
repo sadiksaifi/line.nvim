@@ -77,29 +77,32 @@ require("line").setup({
       git   = " ",  -- Git branch icon
     },
 
-    -- Colors (all can be overridden)
-    colors = {
-      statusline = { fg = "#c0caf5", bg = "#303038" },
-      normal     = { fg = "#24283b", bg = "#a2d2fb" },
-      insert     = { fg = "#24283b", bg = "#9ece6a" },
-      visual     = { fg = "#24283b", bg = "#bb9af7" },
-      replace    = { fg = "#24283b", bg = "#f7768e" },
-      command    = { fg = "#24283b", bg = "#e0af68" },
-      select     = { fg = "#24283b", bg = "#7dcfff" },
-      shell      = { fg = "#24283b", bg = "#7aa2f7" },
-      terminal   = { fg = "#24283b", bg = "#7aa2f7" },
-      file       = { fg = "#c0caf5", bg = "#303038" },
-      diagnostic_error = { fg = "#f7768e", bg = "#303038" },
-      diagnostic      = { fg = "#e0af68", bg = "#303038" },
-      lsp        = { fg = "#a2d2fb", bg = "#303038" },
-      git        = { fg = "#a2d2fb", bg = "#303038" },
-      extension  = { fg = "#24283b", bg = "#a2d2fb" },
-      separator  = { fg = "#c0caf5", bg = "#303038" },
-    },
+    -- Colors (three modes: "inherit", "default", or custom table)
+    colors = "inherit", -- or "default" or table with any of these options:
+    -- colors = {
+    --   statusline = { fg = "#c0caf5", bg = "#303038" },
+    --   normal     = { fg = "#24283b", bg = "#a2d2fb" },
+    --   insert     = { fg = "#24283b", bg = "#9ece6a" },
+    --   visual     = { fg = "#24283b", bg = "#bb9af7" },
+    --   replace    = { fg = "#24283b", bg = "#f7768e" },
+    --   command    = { fg = "#24283b", bg = "#e0af68" },
+    --   select     = { fg = "#24283b", bg = "#7dcfff" },
+    --   shell      = { fg = "#24283b", bg = "#7aa2f7" },
+    --   terminal   = { fg = "#24283b", bg = "#7aa2f7" },
+    --   file       = { fg = "#c0caf5", bg = "#303038" },
+    --   diagnostic_error = { fg = "#f7768e", bg = "#303038" },
+    --   diagnostic      = { fg = "#e0af68", bg = "#303038" },
+    --   lsp        = { fg = "#a2d2fb", bg = "#303038" },
+    --   git        = { fg = "#a2d2fb", bg = "#303038" },
+    --   extension  = { fg = "#24283b", bg = "#a2d2fb" },
+    --   separator  = { fg = "#c0caf5", bg = "#303038" },
+    -- },
 })
 ```
 
-For better editor hints, you can use the types:
+Color modes: "inherit" (default) uses your colorscheme, "default" uses fallback
+colors, or provide a table to override specific colors. For better editor hints,
+you can use the types:
 
 ```lua
 ---@type require('line.types').LineConfig
@@ -110,6 +113,11 @@ local config = {
 }
 require("line").setup(config)
 ```
+
+Color Modes:~
+- "inherit" (default): Uses colors from your current colorscheme
+- "default": Uses built-in fallback colors
+- Table: Override specific colors while inheriting others from colorscheme
 
 ==============================================================================
 OPTIONS							*line-options*
@@ -136,8 +144,13 @@ icons							*line-icons*
 	- git: Git branch icon
 
 colors							*line-colors*
-	All highlight groups can be overridden. See the configuration section
-	above for the complete list of available colors.
+	Color configuration with three modes:
+	- "inherit" (default): Uses colors from your current colorscheme
+	- "default": Uses built-in fallback colors
+	- Table: Override specific colors while inheriting others from colorscheme
+	
+	The plugin will use colors from your colorscheme's highlight groups like
+	StatusLine, Normal, Visual, DiagnosticError, etc.
 
 ==============================================================================
 COMPONENTS						*line-components-overview*

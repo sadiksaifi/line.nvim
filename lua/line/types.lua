@@ -36,4 +36,4 @@
 ---@field lsp? LineLspConfig
 ---@field components? LineComponents
 ---@field icons? LineIcons
----@field colors? LineColors
+---@field colors? LineColors|"default"|"inherit"

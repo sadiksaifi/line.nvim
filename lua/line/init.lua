@@ -312,17 +312,15 @@ function M.get_statusline()
   return "%#LineStatusline#" .. left_str .. "%=" .. right_str .. "%*"
 end
 
--- Setup function
----Setup line.nvim
----@param config? LineConfig
-function M.setup(config)
-  -- Merge user config with defaults
-  state.config = vim.tbl_deep_extend("force", default_config, config or {})
-
-  -- Merge and store colors
+-- Function to refresh colors and reapply highlights
+local function refresh_colors()
+  -- Set up standard User highlight groups first
+  colors_mod.setup_user_highlights()
+  
+  -- Regenerate colors from current colorscheme
   state.colors = colors_mod.merge(state.config.colors)
 
-  -- Set highlights for each component
+  -- Set highlights for each component using standard highlight groups
   local color_map = {
     LineStatusline = state.colors.statusline,
     LineSeparator = state.colors.separator,
@@ -344,6 +342,17 @@ function M.setup(config)
   for group, c in pairs(color_map) do
     vim.api.nvim_set_hl(0, group, { fg = c.fg, bg = c.bg, bold = true })
   end
+end
+
+-- Setup function
+---Setup line.nvim
+---@param config? LineConfig
+function M.setup(config)
+  -- Merge user config with defaults
+  state.config = vim.tbl_deep_extend("force", default_config, config or {})
+
+  -- Initial color setup
+  refresh_colors()
 
   -- Set up statusline
   vim.opt.statusline = '%{%v:lua.require("line").get_statusline()%}'
@@ -397,6 +406,11 @@ function M.setup(config)
       end
     end
   end
+
+  -- Set up colorscheme change handler
+  vim.api.nvim_create_autocmd("ColorScheme", {
+    callback = refresh_colors,
+  })
 
   -- Set up git branch updates
   vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost" }, {

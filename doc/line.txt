@@ -1,11 +1,11 @@
-*line.txt*	A minimal, performant, and beautiful Neovim statusline plugin
+*line.txt*	An opinionated, minimal, and performant Neovim statusline plugin
 
 ==============================================================================
 INTRODUCTION						*line-introduction*
 
-line.nvim is a minimal, performant, and beautiful Neovim statusline plugin
-written in pure Lua. It provides a modern and cohesive statusline with built-in
-LSP status, diagnostic counts, git information, and more.
+line.nvim is an opinionated, minimal, and performant Neovim statusline plugin
+written in pure Lua. This plugin provides a basic set of essential features
+without overwhelming configuration options.
 
 ==============================================================================
 REQUIREMENTS						*line-requirements*
@@ -15,7 +15,9 @@ REQUIREMENTS						*line-requirements*
 ==============================================================================
 INSTALLATION						*line-installation*
 
-With lazy.nvim, add this to your `lua/plugins/line.lua`:
+Using lazy.nvim~
+
+Add this to your `lua/plugins/line.lua`:
 
 ```lua
 return {
@@ -25,18 +27,29 @@ return {
 ```
 
 Note: With lazy.nvim, the `opts` table is automatically passed to the plugin's
-`setup()` function. You do not need to call `setup()` manually.
+`setup()` function.
+
+Using vim.pack (Neovim 0.12+)~
+
+Add this to your `init.lua`:
+
+```lua
+vim.pack.add({
+  "sadiksaifi/line.nvim"
+})
+
+require("line").setup() -- or your custom options
+```
 
 ==============================================================================
 CONFIGURATION						*line-configuration*
 
-You can override any option by passing it in the `opts` table. Here are all
-available options with their default values:
+The plugin works out of the box with sensible defaults. You can customize it by
+passing options to the `setup()` function. All options are fully typed for
+LSP/autocomplete support.
 
 ```lua
-return {
-  "sadiksaifi/line.nvim",
-  opts = {
+require("line").setup({
     -- Project root detection
     root_markers = {
       ".git", ".vscode", ".editorconfig", "package.json", "deno.json",
@@ -83,8 +96,19 @@ return {
       extension  = { fg = "#24283b", bg = "#a2d2fb" },
       separator  = { fg = "#c0caf5", bg = "#303038" },
     },
+})
+```
+
+For better editor hints, you can use the types:
+
+```lua
+---@type require('line.types').LineConfig
+local config = {
+  colors = {
+    statusline = { fg = "#ffffff", bg = "#22223b" },
   },
 }
+require("line").setup(config)
 ```
 
 ==============================================================================
@@ -126,31 +150,6 @@ Right Side:
 - LSP status (spinner while loading, client names when ready)
 - Diagnostic counts with icons (errors/warnings)
 - Git branch information
-
-==============================================================================
-PERFORMANCE						*line-performance*
-
-The plugin is designed to be performant with minimal flickering:
-- Only updates on actual changes
-- Uses efficient event handling
-- Avoids unnecessary redraws
-- Caches project root detection
-- Efficient LSP state tracking
-
-==============================================================================
-TYPES							*line-types*
-
-All options are fully typed for LSP/autocomplete support.
-You can import the types from `require('line.types')` in your config for better
-editor hints.
-
-Example:
-```lua
----@type require('line.types').LineConfig
-local config = {
-  -- your config here
-}
-```
 
 ==============================================================================
 LICENSE							*line-license*

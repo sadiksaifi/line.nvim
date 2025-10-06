@@ -314,7 +314,7 @@ end
 
 -- Setup function
 ---Setup line.nvim
----@param config LineConfig
+---@param config? LineConfig
 function M.setup(config)
   -- Merge user config with defaults
   state.config = vim.tbl_deep_extend("force", default_config, config or {})

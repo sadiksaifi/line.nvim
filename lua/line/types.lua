@@ -32,8 +32,8 @@
 ---@field git boolean
 
 ---@class LineConfig
----@field root_markers string[]
----@field lsp LineLspConfig
----@field components LineComponents
----@field icons LineIcons
----@field colors LineColors
+---@field root_markers? string[]
+---@field lsp? LineLspConfig
+---@field components? LineComponents
+---@field icons? LineIcons
+---@field colors? LineColors

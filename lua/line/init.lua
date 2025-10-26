@@ -27,13 +27,15 @@ local default_config = {
     lsp = true,
     diagnostics = true,
     git = true,
+    extension = true,
   },
   icons = {
     error = "󰅚",
     warn = "󰋽",
     git = " ",
   },
-  colors = {}, -- user can override colors
+  theme = "default", -- default theme
+  colors = {}, -- user can override specific colors
 }
 
 -- Mode names for statusline
@@ -51,6 +53,23 @@ local mode_names = {
   r = "Replace",
   ["!"] = "Shell",
   t = "Terminal",
+}
+
+-- Mode to highlight group mapping (cached for performance)
+local mode_to_hl = {
+  n = "LineModeNormal",
+  i = "LineModeInsert",
+  v = "LineModeVisual",
+  V = "LineModeVisual",
+  ["\22"] = "LineModeVisual",
+  c = "LineModeCommand",
+  s = "LineModeSelect",
+  S = "LineModeSelect",
+  ["\19"] = "LineModeSelect",
+  R = "LineModeReplace",
+  r = "LineModeReplace",
+  ["!"] = "LineModeShell",
+  t = "LineModeTerminal",
 }
 
 -- LSP spinner frames
@@ -74,25 +93,12 @@ local state = {
 -- Utility functions
 local function get_mode_hl()
   local mode = vim.api.nvim_get_mode().mode
-  local mode_map = {
-    n = "LineModeNormal",
-    i = "LineModeInsert",
-    v = "LineModeVisual",
-    V = "LineModeVisual",
-    ["\22"] = "LineModeVisual",
-    c = "LineModeCommand",
-    s = "LineModeSelect",
-    S = "LineModeSelect",
-    ["\19"] = "LineModeSelect",
-    R = "LineModeReplace",
-    r = "LineModeReplace",
-    ["!"] = "LineModeShell",
-    t = "LineModeTerminal",
-  }
-  local hl = mode_map[mode] or "LineModeNormal"
+  local hl = mode_to_hl[mode] or "LineModeNormal"
   return string.format("%%#%s# %s %%#LineStatusline#", hl, mode_names[mode] or "Unknown")
 end
 
+---Get file path component for statusline
+---@return string
 local function get_file_path()
   local bufname = vim.api.nvim_buf_get_name(0)
   if bufname == "" then
@@ -103,6 +109,7 @@ local function get_file_path()
   return hl .. " " .. relative_path .. " " .. "%#LineStatusline#"
 end
 
+---Update LSP spinner animation
 local function update_spinner()
   if state.is_loading then
     state.spinner_frame = (state.spinner_frame % #spinner_frames) + 1
@@ -110,6 +117,7 @@ local function update_spinner()
   end
 end
 
+---Start LSP loading spinner
 local function start_spinner()
   if not state.spinner_timer then
     state.is_loading = true
@@ -118,6 +126,7 @@ local function start_spinner()
   end
 end
 
+---Stop LSP loading spinner
 local function stop_spinner()
   if state.spinner_timer then
     state.spinner_timer:stop()
@@ -169,10 +178,11 @@ local function get_diagnostics()
 end
 
 local function get_git_branch()
+  local hl = "%#LineGit#"
   if state.git_branch == "" then
     return ""
+    -- return hl .. state.config.icons.git .. "" .. "No Branch" .. " " .. "%#LineStatusline#"
   end
-  local hl = "%#LineGit#"
   return hl .. state.config.icons.git .. "" .. state.git_branch .. " " .. "%#LineStatusline#"
 end
 
@@ -282,7 +292,10 @@ function M.get_statusline()
   end
 
   -- Extension badge is always last
-  local extension_badge = get_extension_badge()
+  local extension_badge = ""
+  if state.config.components.extension then
+    extension_badge = get_extension_badge()
+  end
 
   -- Filter out empty right components (before extension)
   local filtered_right = {}
@@ -303,7 +316,7 @@ function M.get_statusline()
 
   -- Add extension badge at the end (no separator after)
   if extension_badge ~= "" then
-    right_str = right_str .. extension_badge
+    right_str = right_str .. " " .. extension_badge
   end
 
   local left_str = table.concat(left, "")
@@ -314,11 +327,11 @@ end
 
 -- Function to refresh colors and reapply highlights
 local function refresh_colors()
-  -- Set up standard User highlight groups first
-  colors_mod.setup_user_highlights()
+  -- Regenerate colors using theme system
+  state.colors = colors_mod.merge(state.config.theme, state.config.colors)
   
-  -- Regenerate colors from current colorscheme
-  state.colors = colors_mod.merge(state.config.colors)
+  -- Set up standard User highlight groups with theme colors
+  colors_mod.setup_user_highlights(state.colors)
 
   -- Set highlights for each component using standard highlight groups
   local color_map = {

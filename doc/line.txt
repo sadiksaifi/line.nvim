@@ -68,6 +68,7 @@ require("line").setup({
       lsp = true,          -- Show LSP status
       diagnostics = true,  -- Show diagnostics
       git = true,          -- Show git branch
+      extension = true,    -- Show file extension badge
     },
 
     -- Icons (can be overridden)
@@ -77,47 +78,60 @@ require("line").setup({
       git   = " ",  -- Git branch icon
     },
 
-    -- Colors (three modes: "inherit", "default", or custom table)
-    colors = "inherit", -- or "default" or table with any of these options:
-    -- colors = {
-    --   statusline = { fg = "#c0caf5", bg = "#303038" },
-    --   normal     = { fg = "#24283b", bg = "#a2d2fb" },
-    --   insert     = { fg = "#24283b", bg = "#9ece6a" },
-    --   visual     = { fg = "#24283b", bg = "#bb9af7" },
-    --   replace    = { fg = "#24283b", bg = "#f7768e" },
-    --   command    = { fg = "#24283b", bg = "#e0af68" },
-    --   select     = { fg = "#24283b", bg = "#7dcfff" },
-    --   shell      = { fg = "#24283b", bg = "#7aa2f7" },
-    --   terminal   = { fg = "#24283b", bg = "#7aa2f7" },
-    --   file       = { fg = "#c0caf5", bg = "#303038" },
-    --   diagnostic_error = { fg = "#f7768e", bg = "#303038" },
-    --   diagnostic      = { fg = "#e0af68", bg = "#303038" },
-    --   lsp        = { fg = "#a2d2fb", bg = "#303038" },
-    --   git        = { fg = "#a2d2fb", bg = "#303038" },
-    --   extension  = { fg = "#24283b", bg = "#a2d2fb" },
-    --   separator  = { fg = "#c0caf5", bg = "#303038" },
-    -- },
+    -- Theme selection
+    theme = "default", -- Available: "default", "rosepine", "catpuccin", "tokyonight", "gruvbox", "vscode", "dracula", "solarized", "boring"
+    
+    -- Color overrides (optional - override specific colors from the selected theme)
+    colors = {
+      -- statusline = { fg = "#cdd6f4", bg = "#1e1e2e" },
+      -- normal     = { fg = "#1e1e2e", bg = "#89b4fa" },
+      -- insert     = { fg = "#1e1e2e", bg = "#a6e3a1" },
+      -- visual     = { fg = "#1e1e2e", bg = "#f9e2af" },
+      -- replace    = { fg = "#1e1e2e", bg = "#f38ba8" },
+      -- command    = { fg = "#1e1e2e", bg = "#cba6f7" },
+      -- select     = { fg = "#1e1e2e", bg = "#74c7ec" },
+      -- shell      = { fg = "#1e1e2e", bg = "#fab387" },
+      -- terminal   = { fg = "#1e1e2e", bg = "#fab387" },
+      -- file       = { fg = "#cdd6f4", bg = "#1e1e2e" },
+      -- diagnostic_error = { fg = "#f38ba8", bg = "#1e1e2e" },
+      -- diagnostic      = { fg = "#f9e2af", bg = "#1e1e2e" },
+      -- lsp        = { fg = "#89b4fa", bg = "#1e1e2e" },
+      -- git        = { fg = "#a6e3a1", bg = "#1e1e2e" },
+      -- extension  = { fg = "#1e1e2e", bg = "#cba6f7" },
+      -- separator  = { fg = "#6c7086", bg = "#1e1e2e" },
+    },
 })
 ```
 
-Color modes: "inherit" (default) uses your colorscheme, "default" uses fallback
-colors, or provide a table to override specific colors. For better editor hints,
-you can use the types:
+Theme System: Choose from 8 built-in themes or override specific colors from any
+theme. For better editor hints, you can use the types:
 
 ```lua
 ---@type require('line.types').LineConfig
 local config = {
+  theme = "rosepine", -- Use Rose Pine theme
   colors = {
-    statusline = { fg = "#ffffff", bg = "#22223b" },
+    statusline = { fg = "#ffffff", bg = "#22223b" }, -- Override just the statusline colors
   },
 }
 require("line").setup(config)
 ```
 
-Color Modes:~
-- "inherit" (default): Uses colors from your current colorscheme
-- "default": Uses built-in fallback colors
-- Table: Override specific colors while inheriting others from colorscheme
+Theme System:~
+- "default": Modern, elegant color palette (default)
+- "rosepine": Rose Pine inspired colors
+- "catpuccin": Catppuccin inspired colors  
+- "tokyonight": Tokyo Night inspired colors
+- "gruvbox": Gruvbox inspired colors
+- "vscode": VS Code inspired colors
+- "dracula": Dracula inspired colors
+- "solarized": Solarized inspired colors
+- "boring": Minimal, basic dark colors for clean simplicity
+
+Color Overrides:~
+You can override any color from the selected theme by providing a `colors` table.
+Only the colors you specify will be overridden, while the rest will use the theme's
+default colors.
 
 ==============================================================================
 OPTIONS							*line-options*
@@ -136,6 +150,7 @@ components						*line-components-options*
 	- lsp: Show LSP status
 	- diagnostics: Show diagnostics
 	- git: Show git branch
+	- extension: Show file extension badge
 
 icons							*line-icons*
 	Unicode icons for various components:
@@ -143,14 +158,22 @@ icons							*line-icons*
 	- warn: Warning diagnostic icon
 	- git: Git branch icon
 
+theme							*line-theme*
+	Theme selection from available built-in themes:
+	- "default": Modern, elegant color palette (default)
+	- "rosepine": Rose Pine inspired colors
+	- "catpuccin": Catppuccin inspired colors
+	- "tokyonight": Tokyo Night inspired colors
+	- "gruvbox": Gruvbox inspired colors
+	- "vscode": VS Code inspired colors
+	- "dracula": Dracula inspired colors
+	- "solarized": Solarized inspired colors
+	- "boring": Minimal, basic dark colors for clean simplicity
+
 colors							*line-colors*
-	Color configuration with three modes:
-	- "inherit" (default): Uses colors from your current colorscheme
-	- "default": Uses built-in fallback colors
-	- Table: Override specific colors while inheriting others from colorscheme
-	
-	The plugin will use colors from your colorscheme's highlight groups like
-	StatusLine, Normal, Visual, DiagnosticError, etc.
+	Color overrides table. Override specific colors from the selected theme.
+	Only the colors you specify will be overridden, while the rest will use
+	the theme's default colors.
 
 ==============================================================================
 COMPONENTS						*line-components-overview*

@@ -66,6 +66,7 @@ require("line").setup({
     lsp = true,          -- Show LSP status
     diagnostics = true,  -- Show diagnostics
     git = true,          -- Show git branch
+    extension = true,    -- Show file extension badge
   },
 
   -- Icons
@@ -75,50 +76,59 @@ require("line").setup({
     git   = " ",  -- Git branch icon
   },
 
-  -- Colors (three modes: "inherit", "default", or custom table)
-  colors = "inherit", -- or "default" or table with any of these options:
-  -- colors = {
-  --   statusline = { fg = "#cdd6f4", bg = "#1e1e2e" },
-  --   normal     = { fg = "#1e1e2e", bg = "#89b4fa" },
-  --   insert     = { fg = "#1e1e2e", bg = "#a6e3a1" },
-  --   visual     = { fg = "#1e1e2e", bg = "#f9e2af" },
-  --   replace    = { fg = "#1e1e2e", bg = "#f38ba8" },
-  --   command    = { fg = "#1e1e2e", bg = "#cba6f7" },
-  --   select     = { fg = "#1e1e2e", bg = "#74c7ec" },
-  --   shell      = { fg = "#1e1e2e", bg = "#fab387" },
-  --   terminal   = { fg = "#1e1e2e", bg = "#fab387" },
-  --   file       = { fg = "#cdd6f4", bg = "#1e1e2e" },
-  --   diagnostic_error = { fg = "#f38ba8", bg = "#1e1e2e" },
-  --   diagnostic      = { fg = "#f9e2af", bg = "#1e1e2e" },
-  --   lsp        = { fg = "#89b4fa", bg = "#1e1e2e" },
-  --   git        = { fg = "#a6e3a1", bg = "#1e1e2e" },
-  --   extension  = { fg = "#1e1e2e", bg = "#cba6f7" },
-  --   separator  = { fg = "#6c7086", bg = "#1e1e2e" },
-  -- },
+  -- Theme selection
+  theme = "default", -- Available: "default", "rosepine", "catpuccin", "tokyonight", "gruvbox", "vscode", "dracula", "solarized", "boring"
+
+  -- Color overrides (optional - override specific colors from the selected theme)
+  colors = {
+    -- statusline = { fg = "#cdd6f4", bg = "#1e1e2e" },
+    -- normal     = { fg = "#1e1e2e", bg = "#89b4fa" },
+    -- insert     = { fg = "#1e1e2e", bg = "#a6e3a1" },
+    -- visual     = { fg = "#1e1e2e", bg = "#f9e2af" },
+    -- replace    = { fg = "#1e1e2e", bg = "#f38ba8" },
+    -- command    = { fg = "#1e1e2e", bg = "#cba6f7" },
+    -- select     = { fg = "#1e1e2e", bg = "#74c7ec" },
+    -- shell      = { fg = "#1e1e2e", bg = "#fab387" },
+    -- terminal   = { fg = "#1e1e2e", bg = "#fab387" },
+    -- file       = { fg = "#cdd6f4", bg = "#1e1e2e" },
+    -- diagnostic_error = { fg = "#f38ba8", bg = "#1e1e2e" },
+    -- diagnostic      = { fg = "#f9e2af", bg = "#1e1e2e" },
+    -- lsp        = { fg = "#89b4fa", bg = "#1e1e2e" },
+    -- git        = { fg = "#a6e3a1", bg = "#1e1e2e" },
+    -- extension  = { fg = "#1e1e2e", bg = "#cba6f7" },
+    -- separator  = { fg = "#6c7086", bg = "#1e1e2e" },
+  },
 })
 ```
 
-> **Tip:** Color modes: `"inherit"` (default) uses your colorscheme with proper highlight group inheritance, `"default"` uses fallback colors, or provide a table to override specific colors. The plugin follows standard Neovim highlight group patterns used by lualine.nvim and mini.statusline.
+> **Tip:** Theme System: Choose from 9 built-in themes (`"default"`, `"rosepine"`, `"catpuccin"`, `"tokyonight"`, `"gruvbox"`, `"vscode"`, `"dracula"`, `"solarized"`, `"boring"`) or override specific colors from any theme. The plugin provides carefully crafted color palettes that work well with popular Neovim colorschemes.
 >
 > ```lua
 > ---@type require('line.types').LineConfig
 > local config = {
+>   theme = "rosepine", -- Use Rose Pine theme
 >   colors = {
->     statusline = { fg = "#ffffff", bg = "#22223b" },
+>     statusline = { fg = "#ffffff", bg = "#22223b" }, -- Override just the statusline colors
 >   },
 > }
 > require("line").setup(config)
 > ```
 >
-> **Color Modes:**
+> **Theme System:**
 >
-> - `colors = "inherit"` - Uses colors from your current colorscheme with proper fallback chain (default)
-> - `colors = "default"` - Uses built-in fallback colors that work with most themes
-> - `colors = { statusline = {...} }` - Override specific colors while inheriting others
+> - `theme = "default"` - Modern, elegant color palette (default)
+> - `theme = "rosepine"` - Rose Pine inspired colors
+> - `theme = "catpuccin"` - Catppuccin inspired colors
+> - `theme = "tokyonight"` - Tokyo Night inspired colors
+> - `theme = "gruvbox"` - Gruvbox inspired colors
+> - `theme = "vscode"` - VS Code inspired colors
+> - `theme = "dracula"` - Dracula inspired colors
+> - `theme = "solarized"` - Solarized inspired colors
+> - `theme = "boring"` - Minimal, basic dark colors for clean simplicity
 >
-> **Color Inheritance:**
+> **Color Overrides:**
 >
-> The plugin uses standard Neovim highlight groups (`User1-User9`, `StatusLine`, `DiagnosticError`, etc.) and follows a proper fallback hierarchy to ensure compatibility with all colorschemes.
+> You can override any color from the selected theme by providing a `colors` table. Only the colors you specify will be overridden, while the rest will use the theme's default colors.
 
 ## Components
 

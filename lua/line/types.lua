@@ -30,10 +30,12 @@
 ---@field lsp boolean
 ---@field diagnostics boolean
 ---@field git boolean
+---@field extension boolean
 
 ---@class LineConfig
 ---@field root_markers? string[]
 ---@field lsp? LineLspConfig
 ---@field components? LineComponents
 ---@field icons? LineIcons
----@field colors? LineColors|"default"|"inherit"
+---@field theme? "default"|"rosepine"|"catpuccin"|"tokyonight"|"gruvbox"|"vscode"|"dracula"|"solarized"|"boring"
+---@field colors? LineColors

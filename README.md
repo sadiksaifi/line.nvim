@@ -6,14 +6,23 @@ An opinionated, minimal, and performant Neovim statusline plugin written in pure
 
 ## Features
 
-- Minimal and fast statusline implementation
-- Built-in LSP status with loading animation
-- Diagnostic counts with icons
-- Git branch information
+- Mode, file path, diagnostics, LSP, and git branch in one line
+- Fits any window width: hides low-priority components and shortens directories instead of cutting off the file name
+- File name emphasized over its directory
+- Readable labels for terminals, quickfix lists, help, and plugin windows such as file trees and pickers
+- LSP client names per buffer, with a spinner, the loading server, and its percentage while it reports progress
+- Error, warning, info, and hint counts per buffer
+- Git branch read from `.git/HEAD`, with no blocking `git` process; supports worktrees and detached HEAD
+- Modified and readonly flags, and the exit code of finished terminals
+- Neovim 0.12 progress messages and the `'busy'` buffer status
+- Dimmed statusline for inactive windows; works with `laststatus=3`
+- 10 themes, including `auto`, which derives colors from your colorscheme
+- `:checkhealth line`
 
 ## Requirements
 
-- Neovim >= 0.11.0
+- Neovim >= 0.12.0
+- A [Nerd Font](https://www.nerdfonts.com) for the default icons
 
 ## Installation
 
@@ -30,13 +39,13 @@ return {
 
 > **Note:** With lazy.nvim, the `opts` table is automatically passed to the plugin's `setup()` function.
 
-### Using vim.pack (Neovim 0.12+)
+### Using vim.pack
 
 Add this to your `init.lua`:
 
 ```lua
 vim.pack.add({
-  "sadiksaifi/line.nvim"
+  "https://github.com/sadiksaifi/line.nvim",
 })
 
 require("line").setup() -- or your custom options
@@ -44,11 +53,11 @@ require("line").setup() -- or your custom options
 
 ## Configuration
 
-The plugin works out of the box with sensible defaults. You can customize it by passing options to the `setup()` function. All options are fully typed for LSP/autocomplete support.
+The plugin works out of the box with sensible defaults. You can customize it by passing options to the `setup()` function. All options are typed for LSP completion. Calling `setup()` again replaces the previous configuration.
 
 ```lua
 require("line").setup({
-  -- Project root detection
+  -- Markers that identify the project root. File paths are shown relative to it.
   root_markers = {
     ".git", ".vscode", ".editorconfig", "package.json", "deno.json",
     "pyproject.toml", "Cargo.toml", "go.mod", "composer.json", "Gemfile",
@@ -61,87 +70,135 @@ require("line").setup({
 
   -- Statusline components (enable/disable)
   components = {
-    mode = true,         -- Show current mode
-    file_path = true,    -- Show file path
-    lsp = true,          -- Show LSP status
-    diagnostics = true,  -- Show diagnostics
-    git = true,          -- Show git branch
-    extension = true,    -- Show file extension badge
+    mode = true,         -- Current mode
+    file_path = true,    -- File path with modified/readonly flags
+    lsp = true,          -- LSP clients, spinner while loading
+    diagnostics = true,  -- Diagnostic counts
+    git = true,          -- Git branch
+    extension = true,    -- File extension badge
+    progress = true,     -- Progress messages and 'busy' status
+    location = false,    -- Line, column, and scroll percentage
+    recording = false,   -- Register of the macro being recorded
   },
 
   -- Icons
   icons = {
-    error = "󰅚",   -- Error diagnostic icon
-    warn  = "󰋽",   -- Warning diagnostic icon
-    git   = " ",  -- Git branch icon
+    error = "󰅚",
+    warn = "󰋽",
+    info = "󰋼",
+    hint = "󰌶",
+    git = " ",
+    modified = "●",
+    readonly = "",
+    busy = "◐",
   },
 
-  -- Theme selection
-  theme = "default", -- Available: "default", "rosepine", "catpuccin", "tokyonight", "gruvbox", "vscode", "dracula", "solarized", "boring"
+  -- Available: "auto", "default", "rosepine", "catppuccin", "tokyonight",
+  -- "gruvbox", "vscode", "dracula", "solarized", "boring"
+  theme = "default",
 
-  -- Color overrides (optional - override specific colors from the selected theme)
+  -- Override specific colors of the selected theme
   colors = {
-    -- statusline = { fg = "#cdd6f4", bg = "#1e1e2e" },
-    -- normal     = { fg = "#1e1e2e", bg = "#89b4fa" },
-    -- insert     = { fg = "#1e1e2e", bg = "#a6e3a1" },
-    -- visual     = { fg = "#1e1e2e", bg = "#f9e2af" },
-    -- replace    = { fg = "#1e1e2e", bg = "#f38ba8" },
-    -- command    = { fg = "#1e1e2e", bg = "#cba6f7" },
-    -- select     = { fg = "#1e1e2e", bg = "#74c7ec" },
-    -- shell      = { fg = "#1e1e2e", bg = "#fab387" },
-    -- terminal   = { fg = "#1e1e2e", bg = "#fab387" },
-    -- file       = { fg = "#cdd6f4", bg = "#1e1e2e" },
+    -- statusline       = { fg = "#cdd6f4", bg = "#1e1e2e" },
+    -- normal           = { fg = "#1e1e2e", bg = "#89b4fa" },
+    -- insert           = { fg = "#1e1e2e", bg = "#a6e3a1" },
+    -- visual           = { fg = "#1e1e2e", bg = "#f9e2af" },
+    -- replace          = { fg = "#1e1e2e", bg = "#f38ba8" },
+    -- command          = { fg = "#1e1e2e", bg = "#cba6f7" },
+    -- select           = { fg = "#1e1e2e", bg = "#74c7ec" },
+    -- shell            = { fg = "#1e1e2e", bg = "#fab387" },
+    -- terminal         = { fg = "#1e1e2e", bg = "#fab387" },
+    -- file             = { fg = "#cdd6f4", bg = "#1e1e2e" },
+    -- file_dir         = { fg = "#6c7086", bg = "#1e1e2e" },
     -- diagnostic_error = { fg = "#f38ba8", bg = "#1e1e2e" },
-    -- diagnostic      = { fg = "#f9e2af", bg = "#1e1e2e" },
-    -- lsp        = { fg = "#89b4fa", bg = "#1e1e2e" },
-    -- git        = { fg = "#a6e3a1", bg = "#1e1e2e" },
-    -- extension  = { fg = "#1e1e2e", bg = "#cba6f7" },
-    -- separator  = { fg = "#6c7086", bg = "#1e1e2e" },
+    -- diagnostic       = { fg = "#f9e2af", bg = "#1e1e2e" }, -- warnings
+    -- diagnostic_info  = { fg = "#89dceb", bg = "#1e1e2e" },
+    -- diagnostic_hint  = { fg = "#94e2d5", bg = "#1e1e2e" },
+    -- lsp              = { fg = "#89b4fa", bg = "#1e1e2e" },
+    -- git              = { fg = "#a6e3a1", bg = "#1e1e2e" },
+    -- extension        = { fg = "#1e1e2e", bg = "#cba6f7" },
+    -- separator        = { fg = "#6c7086", bg = "#1e1e2e" },
+    -- inactive         = { fg = "#6c7086", bg = "#1e1e2e" },
   },
 })
 ```
 
-> **Tip:** Theme System: Choose from 9 built-in themes (`"default"`, `"rosepine"`, `"catpuccin"`, `"tokyonight"`, `"gruvbox"`, `"vscode"`, `"dracula"`, `"solarized"`, `"boring"`) or override specific colors from any theme. The plugin provides carefully crafted color palettes that work well with popular Neovim colorschemes.
+> **Tip:** Annotate your config to get completion in your own config files:
 >
 > ```lua
-> ---@type require('line.types').LineConfig
+> ---@type LineConfig
 > local config = {
->   theme = "rosepine", -- Use Rose Pine theme
+>   theme = "rosepine",
 >   colors = {
->     statusline = { fg = "#ffffff", bg = "#22223b" }, -- Override just the statusline colors
+>     statusline = { fg = "#ffffff", bg = "#22223b" },
 >   },
 > }
 > require("line").setup(config)
 > ```
->
-> **Theme System:**
->
-> - `theme = "default"` - Modern, elegant color palette (default)
-> - `theme = "rosepine"` - Rose Pine inspired colors
-> - `theme = "catpuccin"` - Catppuccin inspired colors
-> - `theme = "tokyonight"` - Tokyo Night inspired colors
-> - `theme = "gruvbox"` - Gruvbox inspired colors
-> - `theme = "vscode"` - VS Code inspired colors
-> - `theme = "dracula"` - Dracula inspired colors
-> - `theme = "solarized"` - Solarized inspired colors
-> - `theme = "boring"` - Minimal, basic dark colors for clean simplicity
->
-> **Color Overrides:**
->
-> You can override any color from the selected theme by providing a `colors` table. Only the colors you specify will be overridden, while the rest will use the theme's default colors.
+
+### Themes
+
+- `auto`: colors taken from the active colorscheme, updated on every `:colorscheme`
+- `default`: modern, elegant color palette
+- `rosepine`: Rose Pine inspired colors
+- `catppuccin`: Catppuccin inspired colors (`catpuccin` still works)
+- `tokyonight`: Tokyo Night inspired colors
+- `gruvbox`: Gruvbox inspired colors
+- `vscode`: VS Code inspired colors
+- `dracula`: Dracula inspired colors
+- `solarized`: Solarized inspired colors
+- `boring`: minimal, basic dark colors
+
+Only the colors you set in `colors` override the theme. The rest keep the theme's values.
+
+### Highlight groups
+
+Each color key sets one highlight group: `LineStatusline`, `LineSeparator`, `LineModeNormal`, `LineModeInsert`, `LineModeVisual`, `LineModeReplace`, `LineModeCommand`, `LineModeSelect`, `LineModeShell`, `LineModeTerminal`, `LineFile`, `LineFileDir`, `LineLsp`, `LineDiagnosticError`, `LineDiagnostic`, `LineDiagnosticInfo`, `LineDiagnosticHint`, `LineGit`, `LineExtension`, and `LineInactive`.
 
 ## Components
 
-### Left Side
+### Left side
 
-- Current mode (using built-in Neovim mode names)
-- File path relative to project root
+- Current mode
+- File path relative to the project root, with modified and readonly flags
 
-### Right Side
+### Right side
 
-- LSP status (spinner while loading, client names when ready)
-- Diagnostic counts with icons (errors/warnings)
-- Git branch information
+- Macro recording (opt-in)
+- Progress messages and `'busy'` status
+- Diagnostic counts (errors, warnings, info, hints)
+- LSP status: client names, or a spinner with the loading clients and their percentage
+- Git branch
+- Cursor location (opt-in)
+- File extension badge
+
+Inactive windows show only the file path.
+
+### Narrow windows
+
+When the line does not fit, line.nvim drops content in this order until it fits:
+
+1. Cursor location
+2. LSP clients
+3. Directory names in the path shorten to one letter (`lua/line/init.lua` becomes `l/l/init.lua`)
+4. Git branch
+5. Progress
+6. Extension badge
+7. Diagnostics
+
+The mode shows a short label (`N`, `I`, `V`) below 60 columns. Branch names and LSP client lists longer than 30 characters end with `…`.
+
+### Special buffers
+
+- Terminals show the running command and, after it exits, its exit code
+- Quickfix and location lists show their title. line.nvim sets `g:qf_disable_statusline` so the quickfix ftplugin does not replace the statusline. Set it to `0` before `setup()` to keep the default.
+- Plugin windows (`'buftype'` set, such as file trees and pickers) show their filetype in the badge
+- URI buffers such as `oil:///path` show the scheme and a short path
+
+## Development
+
+- Format with [StyLua](https://github.com/JohnnyMorganz/StyLua): `stylua .`
+- `.luarc.json` configures [lua-language-server](https://github.com/LuaLS/lua-language-server) with the Neovim runtime from `$VIMRUNTIME`. Start the language server from Neovim so `$VIMRUNTIME` is set.
 
 ## Contributing
 

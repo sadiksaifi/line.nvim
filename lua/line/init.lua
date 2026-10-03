@@ -1,437 +1,378 @@
 local M = {}
 
-local colors_mod = require("line.colors")
----@type LineConfig
-local default_config = {
-  root_markers = {
-    ".git",
-    ".vscode",
-    ".editorconfig",
-    "package.json",
-    "deno.json",
-    "pyproject.toml",
-    "Cargo.toml",
-    "go.mod",
-    "composer.json",
-    "Gemfile",
-  },
-  lsp = {
-    ignored_clients = {
-      "null-ls",
-      "eslint",
-    },
-  },
-  components = {
-    mode = true,
-    file_path = true,
-    lsp = true,
-    diagnostics = true,
-    git = true,
-    extension = true,
-  },
-  icons = {
-    error = "󰅚",
-    warn = "󰋽",
-    git = " ",
-  },
-  theme = "default", -- default theme
-  colors = {}, -- user can override specific colors
-}
+local api = vim.api
 
--- Mode names for statusline
-local mode_names = {
-  n = "Normal",
-  i = "Insert",
-  v = "Visual",
-  V = "V-Line",
-  ["\22"] = "V-Block",
-  c = "Command",
-  s = "Select",
-  S = "S-Line",
-  ["\19"] = "S-Block",
-  R = "Replace",
-  r = "Replace",
-  ["!"] = "Shell",
-  t = "Terminal",
-}
+local SEPARATOR = "%#LineSeparator# | %#LineStatusline#"
+local STATUSLINE = "%!v:lua.require'line'.render()"
+-- Components ranked at or below this drop rank are hidden only after the path is shortened.
+local SHORTEN_PATH_AT = 5
 
--- Mode to highlight group mapping (cached for performance)
-local mode_to_hl = {
-  n = "LineModeNormal",
-  i = "LineModeInsert",
-  v = "LineModeVisual",
-  V = "LineModeVisual",
-  ["\22"] = "LineModeVisual",
-  c = "LineModeCommand",
-  s = "LineModeSelect",
-  S = "LineModeSelect",
-  ["\19"] = "LineModeSelect",
-  R = "LineModeReplace",
-  r = "LineModeReplace",
-  ["!"] = "LineModeShell",
-  t = "LineModeTerminal",
-}
+---@alias LineComponentFn fun(buf: integer, win: integer, width: integer): string
 
--- LSP spinner frames
-local spinner_frames = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
+---A right side component. When the statusline is too narrow, components with the highest `drop`
+---are hidden first. A `drop` of 0 is never hidden.
+---@class LineSlot
+---@field render LineComponentFn
+---@field drop integer
+---@field width? integer Fixed display width, for components made of statusline items like %l
 
--- State management
-local state = {
-  config = default_config,
-  lsp_clients = {},
-  lsp_progress = {},
-  current_mode = "n",
-  diagnostics = { error = 0, warn = 0 },
-  git_branch = "",
-  project_root = "",
-  spinner_frame = 1,
-  spinner_timer = nil,
-  is_loading = false,
-  colors = {},
-}
+---@type LineComponentFn?
+local mode
+local show_file = false
+---@type LineSlot[]
+local right = {}
+---@type LineSlot?
+local badge
 
--- Utility functions
-local function get_mode_hl()
-  local mode = vim.api.nvim_get_mode().mode
-  local hl = mode_to_hl[mode] or "LineModeNormal"
-  return string.format("%%#%s# %s %%#LineStatusline#", hl, mode_names[mode] or "Unknown")
+local configured = false
+
+---Display width of a statusline string, ignoring highlight and alignment items.
+---@param s string
+---@return integer
+local function cells(s)
+  s = s:gsub("%%#[^#]*#", ""):gsub("%%[<=*]", ""):gsub("%%%%", "%%")
+  return api.nvim_strwidth(s)
 end
 
----Get file path component for statusline
----@return string
-local function get_file_path()
-  local bufname = vim.api.nvim_buf_get_name(0)
-  if bufname == "" then
-    return ""
-  end
-  local hl = "%#LineFile#"
-  local relative_path = vim.fn.fnamemodify(bufname, ":~:.")
-  return hl .. " " .. relative_path .. " " .. "%#LineStatusline#"
-end
+---@class LineItem
+---@field text string
+---@field width integer
+---@field drop integer
+---@field hidden? boolean
 
----Update LSP spinner animation
-local function update_spinner()
-  if state.is_loading then
-    state.spinner_frame = (state.spinner_frame % #spinner_frames) + 1
-    vim.cmd("redrawstatus")
-  end
-end
-
----Start LSP loading spinner
-local function start_spinner()
-  if not state.spinner_timer then
-    state.is_loading = true
-    state.spinner_timer = vim.loop.new_timer()
-    state.spinner_timer:start(0, 100, vim.schedule_wrap(update_spinner))
-  end
-end
-
----Stop LSP loading spinner
-local function stop_spinner()
-  if state.spinner_timer then
-    state.spinner_timer:stop()
-    state.spinner_timer:close()
-    state.spinner_timer = nil
-  end
-  state.is_loading = false
-  state.lsp_progress = {}
-  vim.cmd("redrawstatus")
-end
-
--- Right component helpers (no trailing space, statusline bg)
-local function get_lsp_status()
-  if #state.lsp_clients == 0 then
-    return ""
-  end
-  local hl = "%#LineLsp#"
-  if state.is_loading then
-    local frame = spinner_frames[state.spinner_frame]
-    return hl .. " Loading LSP" .. " " .. frame .. "%#LineStatusline#"
-  end
-  return hl .. table.concat(state.lsp_clients, ",") .. "%#LineStatusline#"
-end
-
-local function get_diagnostics()
-  local error_count = state.diagnostics.error
-  local warn_count = state.diagnostics.warn
-  local parts = {}
-  if error_count > 0 then
-    table.insert(
-      parts,
-      "%#LineDiagnosticError# "
-        .. state.config.icons.error
-        .. " "
-        .. error_count
-        .. "%#LineStatusline#"
-    )
-  end
-  if warn_count > 0 then
-    table.insert(
-      parts,
-      "%#LineDiagnostic# " .. state.config.icons.warn .. " " .. warn_count .. "%#LineStatusline#"
-    )
-  end
-  if #parts == 0 then
-    return ""
-  end
-  return table.concat(parts, "")
-end
-
-local function get_git_branch()
-  local hl = "%#LineGit#"
-  if state.git_branch == "" then
-    return ""
-    -- return hl .. state.config.icons.git .. "" .. "No Branch" .. " " .. "%#LineStatusline#"
-  end
-  return hl .. state.config.icons.git .. "" .. state.git_branch .. " " .. "%#LineStatusline#"
-end
-
--- Extension badge keeps its own bg and a space before for separation
-local function get_extension_badge()
-  local bufname = vim.api.nvim_buf_get_name(0)
-  if bufname == "" then
-    local buftype = vim.bo.buftype
-    if buftype ~= "" then
-      return string.format("%%#LineExtension# %s %%#LineStatusline#", buftype)
+---Width of the visible right side items, including separators and the space before the badge.
+---@param items LineItem[]
+---@param badge_item LineItem?
+---@return integer
+local function right_width(items, badge_item)
+  local total, count = 0, 0
+  for _, item in ipairs(items) do
+    if not item.hidden then
+      total, count = total + item.width, count + 1
     end
-    return string.format("%%#LineExtension#[No Name]%%#LineStatusline#")
   end
-  local ext = vim.fn.fnamemodify(bufname, ":e")
-  if ext == "" then
-    return string.format("%%#LineExtension#[No Name]%%#LineStatusline#")
+  total = total + math.max(count - 1, 0) * 3
+  if badge_item and not badge_item.hidden then
+    total = total + badge_item.width
   end
-  return string.format("%%#LineExtension# %s %%#LineStatusline#", ext)
+  if count > 0 or (badge_item and not badge_item.hidden) then
+    total = total + 1
+  end
+  return total
 end
 
--- Event handlers
-local function on_mode_change()
-  vim.cmd("redrawstatus")
-end
+---Render the statusline of the window in g:statusline_winid.
+---@return string
+function M.render()
+  local components = require("line.components")
+  local current = api.nvim_get_current_win()
+  local win = vim.g.statusline_winid or current
+  local buf = api.nvim_win_get_buf(win)
+  local global = vim.o.laststatus == 3
+  local width = global and vim.o.columns or api.nvim_win_get_width(win)
 
-local function on_lsp_attach(client)
-  if not vim.tbl_contains(state.config.lsp.ignored_clients, client.name) then
-    -- Check if client is already in the list
-    local exists = false
-    for _, name in ipairs(state.lsp_clients) do
-      if name == client.name then
-        exists = true
+  if win ~= current and not global then
+    if not show_file then
+      return "%#LineInactive#"
+    end
+    local file = components.file_path(buf, win, width, false, true)
+    if cells(file) > width then
+      file = components.file_path(buf, win, width, true, true)
+    end
+    return "%#LineInactive#%<" .. file
+  end
+
+  local mode_text = mode and mode(buf, win, width) or ""
+  local file = show_file and components.file_path(buf, win, width, false) or ""
+
+  ---@type LineItem[]
+  local items = {}
+  for _, slot in ipairs(right) do
+    local text = slot.render(buf, win, width)
+    if text ~= "" then
+      items[#items + 1] = { text = text, width = slot.width or cells(text), drop = slot.drop }
+    end
+  end
+  ---@type LineItem?
+  local badge_item
+  if badge then
+    local text = badge.render(buf, win, width)
+    if text ~= "" then
+      badge_item = { text = text, width = cells(text), drop = badge.drop }
+    end
+  end
+
+  -- Fit the line to the window. Hide components from the lowest priority up, and shorten
+  -- directory names before hiding anything ranked SHORTEN_PATH_AT or higher.
+  local left_width = cells(mode_text) + cells(file)
+  local shortened = false
+  local candidates = vim.list_extend({ badge_item }, items)
+  table.sort(candidates, function(a, b)
+    return a.drop > b.drop
+  end)
+  for _, item in ipairs(candidates) do
+    if left_width + right_width(items, badge_item) <= width then
+      break
+    end
+    if not shortened and file ~= "" and item.drop <= SHORTEN_PATH_AT then
+      shortened = true
+      file = components.file_path(buf, win, width, true)
+      left_width = cells(mode_text) + cells(file)
+      if left_width + right_width(items, badge_item) <= width then
         break
       end
     end
-    if not exists then
-      table.insert(state.lsp_clients, client.name)
-      vim.cmd("redrawstatus")
-    end
-  end
-end
-
-local function on_lsp_detach(client)
-  for i, name in ipairs(state.lsp_clients) do
-    if name == client.name then
-      table.remove(state.lsp_clients, i)
+    if item.drop == 0 then
       break
     end
+    item.hidden = true
   end
-  vim.cmd("redrawstatus")
-end
+  if not shortened and file ~= "" and left_width + right_width(items, badge_item) > width then
+    file = components.file_path(buf, win, width, true)
+  end
 
-local function on_lsp_progress(_, result)
-  if result.token then
-    if result.value then
-      -- Progress update
-      state.lsp_progress[result.token] = result.value
-      start_spinner()
-    else
-      -- Progress end
-      state.lsp_progress[result.token] = nil
-      if not next(state.lsp_progress) then
-        stop_spinner()
+  local parts = { "%#LineStatusline#", mode_text, "%<", file, "%=" }
+  local count = 0
+  for _, item in ipairs(items) do
+    if not item.hidden then
+      if count > 0 then
+        parts[#parts + 1] = SEPARATOR
       end
+      parts[#parts + 1] = item.text
+      count = count + 1
     end
+  end
+  local badge_text = badge_item and not badge_item.hidden and badge_item.text or ""
+  if count > 0 or badge_text ~= "" then
+    parts[#parts + 1] = " "
+  end
+  parts[#parts + 1] = badge_text
+  parts[#parts + 1] = "%*"
+  return table.concat(parts)
+end
+
+---Kept for configs that reference the old entry point.
+M.get_statusline = M.render
+
+---Reapply theme colors to the Line* highlight groups.
+function M.refresh()
+  local colors = require("line.colors")
+  local options = require("line.config").options
+  colors.apply(colors.merge(options.theme, options.colors))
+end
+
+---Redraw statuslines that show a buffer, or all statuslines.
+---@param buf integer?
+local function redraw(buf)
+  if buf and api.nvim_buf_is_valid(buf) then
+    api.nvim__redraw({ buf = buf, statusline = true })
+  else
+    api.nvim__redraw({ statusline = true })
   end
 end
 
-local function on_diagnostics_update()
-  local diagnostics = vim.diagnostic.get(0)
-  state.diagnostics = {
-    error = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.ERROR }),
-    warn = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.WARN }),
-  }
-  vim.cmd("redrawstatus")
-end
+---@param opts LineOptions
+local function build_layout(opts)
+  local c = require("line.components")
+  local enabled = opts.components
+  mode = enabled.mode and c.mode or nil
+  show_file = enabled.file_path == true
+  right, badge = {}, nil
 
-local function update_git_branch()
-  local utils = require("line.utils")
-  state.git_branch = utils.get_git_branch()
-  vim.cmd("redrawstatus")
-end
-
--- Statusline function
-function M.get_statusline()
-  local left = {}
-  local right = {}
-
-  -- Left side components
-  if state.config.components.mode then
-    table.insert(left, get_mode_hl())
-  end
-
-  if state.config.components.file_path then
-    table.insert(left, get_file_path())
-  end
-
-  -- Right side components (order: diagnostics, lsp, git)
-  if state.config.components.diagnostics then
-    table.insert(right, get_diagnostics())
-  end
-  if state.config.components.lsp then
-    table.insert(right, get_lsp_status())
-  end
-  if state.config.components.git then
-    table.insert(right, get_git_branch())
-  end
-
-  -- Extension badge is always last
-  local extension_badge = ""
-  if state.config.components.extension then
-    extension_badge = get_extension_badge()
-  end
-
-  -- Filter out empty right components (before extension)
-  local filtered_right = {}
-  for _, v in ipairs(right) do
-    if v and v ~= "" then
-      table.insert(filtered_right, v)
+  ---@param on boolean?
+  ---@param render LineComponentFn
+  ---@param drop integer
+  ---@param width integer?
+  local function add(on, render, drop, width)
+    if on then
+      right[#right + 1] = { render = render, drop = drop, width = width }
     end
   end
-
-  -- Insert pipe separator between right components (not before first, not after last)
-  local right_str = ""
-  for i, v in ipairs(filtered_right) do
-    right_str = right_str .. v
-    if i < #filtered_right then
-      right_str = right_str .. "%#LineSeparator# | %#LineStatusline#"
-    end
-  end
-
-  -- Add extension badge at the end (no separator after)
-  if extension_badge ~= "" then
-    right_str = right_str .. " " .. extension_badge
-  end
-
-  local left_str = table.concat(left, "")
-
-  -- Use '%=' to right-align the right section, and add a single space after if not empty
-  return "%#LineStatusline#" .. left_str .. "%=" .. right_str .. "%*"
-end
-
--- Function to refresh colors and reapply highlights
-local function refresh_colors()
-  -- Regenerate colors using theme system
-  state.colors = colors_mod.merge(state.config.theme, state.config.colors)
-  
-  -- Set up standard User highlight groups with theme colors
-  colors_mod.setup_user_highlights(state.colors)
-
-  -- Set highlights for each component using standard highlight groups
-  local color_map = {
-    LineStatusline = state.colors.statusline,
-    LineSeparator = state.colors.separator,
-    LineModeNormal = state.colors.normal,
-    LineModeInsert = state.colors.insert,
-    LineModeVisual = state.colors.visual,
-    LineModeReplace = state.colors.replace,
-    LineModeCommand = state.colors.command,
-    LineModeSelect = state.colors.select,
-    LineModeShell = state.colors.shell,
-    LineModeTerminal = state.colors.terminal,
-    LineFile = state.colors.file,
-    LineLsp = state.colors.lsp,
-    LineDiagnosticError = state.colors.diagnostic_error,
-    LineDiagnostic = state.colors.diagnostic,
-    LineGit = state.colors.git,
-    LineExtension = state.colors.extension,
-  }
-  for group, c in pairs(color_map) do
-    vim.api.nvim_set_hl(0, group, { fg = c.fg, bg = c.bg, bold = true })
+  -- Display order. The drop rank decides what disappears first in narrow windows.
+  add(enabled.recording, c.recording, 0)
+  add(enabled.progress, c.progress, 3)
+  add(enabled.diagnostics, c.diagnostics, 1)
+  add(enabled.lsp, c.lsp, 5)
+  add(enabled.git, c.git, 4)
+  add(enabled.location, c.location, 6, 12)
+  if enabled.extension then
+    badge = { render = c.extension, drop = 2 }
   end
 end
 
--- Setup function
----Setup line.nvim
----@param config? LineConfig
-function M.setup(config)
-  -- Merge user config with defaults
-  state.config = vim.tbl_deep_extend("force", default_config, config or {})
+---Look up paths, and git data when enabled, for the buffers shown in windows.
+---@param with_git boolean?
+local function prepare_visible(with_git)
+  local components = require("line.components")
+  for _, win in ipairs(api.nvim_list_wins()) do
+    components.prepare(api.nvim_win_get_buf(win))
+  end
+  if with_git then
+    require("line.git").refresh_visible()
+  end
+end
 
-  -- Initial color setup
-  refresh_colors()
+---@param opts LineOptions
+local function create_autocmds(opts)
+  local components = require("line.components")
+  local enabled = opts.components
+  local group = api.nvim_create_augroup("line.nvim", { clear = true })
 
-  -- Set up statusline
-  vim.opt.statusline = '%{%v:lua.require("line").get_statusline()%}'
-
-  -- Set up event handlers
-  vim.api.nvim_create_autocmd("ModeChanged", {
-    callback = on_mode_change,
-  })
-
-  vim.api.nvim_create_autocmd("LspAttach", {
-    callback = function(args)
-      on_lsp_attach(vim.lsp.get_client_by_id(args.data.client_id))
-    end,
-  })
-
-  vim.api.nvim_create_autocmd("LspDetach", {
-    callback = function(args)
-      on_lsp_detach(vim.lsp.get_client_by_id(args.data.client_id))
-    end,
-  })
-
-  vim.api.nvim_create_autocmd("DiagnosticChanged", {
-    callback = on_diagnostics_update,
-  })
-
-  -- Set up LSP progress handler
-  vim.lsp.handlers["$/progress"] = function(_, result, ctx)
-    if not result.token then
-      return
-    end
-
-    -- Handle progress end
-    if not result.value then
-      state.lsp_progress[result.token] = nil
-      -- Only stop spinner if no more progress items
-      if not next(state.lsp_progress) then
-        stop_spinner()
-      end
-      return
-    end
-
-    -- Handle progress update
-    if result.value.kind == "begin" then
-      state.lsp_progress[result.token] = result.value
-      start_spinner()
-    elseif result.value.kind == "end" then
-      state.lsp_progress[result.token] = nil
-      -- Only stop spinner if no more progress items
-      if not next(state.lsp_progress) then
-        stop_spinner()
-      end
-    end
+  ---@param event string|string[]
+  ---@param callback fun(args: vim.api.keyset.create_autocmd.callback_args)
+  ---@param pattern string?
+  local function on(event, callback, pattern)
+    api.nvim_create_autocmd(event, { group = group, pattern = pattern, callback = callback })
   end
 
-  -- Set up colorscheme change handler
-  vim.api.nvim_create_autocmd("ColorScheme", {
-    callback = refresh_colors,
-  })
+  on("ColorScheme", M.refresh)
 
-  -- Set up git branch updates
-  vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost" }, {
-    callback = update_git_branch,
-  })
+  local git = require("line.git")
 
-  -- Initial git branch update
-  update_git_branch()
+  -- Look up paths and git data before the window is drawn, so rendering only reads caches.
+  on({ "BufWinEnter", "BufEnter" }, function(args)
+    components.prepare(args.buf)
+    if enabled.git then
+      git.refresh(args.buf)
+    end
+  end)
+
+  on("BufWipeout", function(args)
+    components.forget(args.buf)
+    require("line.lsp").invalidate(args.buf)
+    git.forget(args.buf)
+  end)
+
+  -- The buffer becomes a terminal after BufEnter has already cached its path.
+  on("TermOpen", function(args)
+    components.invalidate_path(args.buf)
+    components.prepare(args.buf)
+  end)
+
+  on("BufFilePost", function(args)
+    components.invalidate_path(args.buf)
+    components.prepare(args.buf)
+    git.invalidate(args.buf)
+    if enabled.git then
+      git.refresh(args.buf)
+    end
+  end)
+
+  on("DirChanged", function()
+    components.invalidate_path()
+    git.invalidate()
+    prepare_visible(enabled.git)
+    redraw()
+  end)
+
+  on("BufModifiedSet", function(args)
+    redraw(args.buf)
+  end)
+
+  if enabled.mode then
+    on("ModeChanged", function()
+      api.nvim__redraw({ win = api.nvim_get_current_win(), statusline = true })
+    end)
+  end
+
+  if enabled.diagnostics then
+    on("DiagnosticChanged", function(args)
+      components.invalidate_diagnostics(args.buf)
+      redraw(args.buf)
+    end)
+  end
+
+  if enabled.lsp then
+    local lsp = require("line.lsp")
+    on("LspAttach", function(args)
+      lsp.invalidate(args.buf)
+      redraw(args.buf)
+    end)
+    -- The client is still attached while LspDetach runs, so update after it finishes.
+    on("LspDetach", function(args)
+      vim.schedule(function()
+        lsp.invalidate(args.buf)
+        redraw(args.buf)
+      end)
+    end)
+    on("LspProgress", function(args)
+      lsp.on_progress(args.data)
+    end)
+  end
+
+  if enabled.progress then
+    -- Initialize vim.ui progress tracking before our handler so it sees every event.
+    vim.ui.progress_status()
+    on("Progress", function()
+      redraw()
+    end)
+    on("OptionSet", function()
+      redraw()
+    end, "busy")
+  end
+
+  if enabled.git then
+    -- Events after which HEAD may have changed outside this buffer.
+    on({ "FocusGained", "ShellCmdPost", "TermLeave" }, function()
+      git.reload()
+    end)
+    on("BufWritePost", function(args)
+      git.refresh(args.buf)
+    end)
+  end
+
+  if enabled.recording then
+    on("RecordingEnter", function()
+      redraw()
+    end)
+    -- reg_recording() still returns the register while RecordingLeave runs.
+    on("RecordingLeave", function()
+      vim.schedule(redraw)
+    end)
+  end
 end
+
+---Set up line.nvim. Calling it again replaces the previous configuration.
+---@param opts? LineConfig
+function M.setup(opts)
+  if vim.fn.has("nvim-0.12") == 0 then
+    vim.notify("line.nvim requires Neovim 0.12 or later", vim.log.levels.ERROR)
+    return
+  end
+
+  local options = require("line.config").setup(opts)
+  if not require("line.themes").get_theme(options.theme) then
+    vim.notify(
+      string.format('line.nvim: unknown theme "%s", using "default"', options.theme),
+      vim.log.levels.WARN
+    )
+    options.theme = "default"
+  end
+
+  require("line.components").setup(options)
+  require("line.lsp").setup(options.lsp.ignored_clients)
+  require("line.git").reset()
+
+  M.refresh()
+  build_layout(options)
+  create_autocmds(options)
+  prepare_visible(options.components.git)
+
+  -- Keep the quickfix ftplugin from replacing this statusline with its own.
+  if vim.g.qf_disable_statusline == nil then
+    vim.g.qf_disable_statusline = 1
+  end
+  vim.o.statusline = STATUSLINE
+  configured = true
+  redraw()
+end
+
+---Whether setup() completed. Used by :checkhealth.
+---@return boolean
+function M.is_configured()
+  return configured
+end
+
+M.STATUSLINE = STATUSLINE
 
 return M

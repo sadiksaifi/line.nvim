@@ -3,6 +3,7 @@ local M = {}
 local bg = "#252531"
 local fg = "#D3D3D3"
 -- Boring theme - minimal, transparent with soft white text
+---@type LineColors
 M.colors = {
   statusline = { fg = fg, bg = bg },
   normal = { fg = fg, bg = bg },
@@ -16,6 +17,8 @@ M.colors = {
   file = { fg = fg, bg = bg },
   diagnostic_error = { fg = fg, bg = bg },
   diagnostic = { fg = fg, bg = bg },
+  diagnostic_info = { fg = fg, bg = bg },
+  diagnostic_hint = { fg = fg, bg = bg },
   lsp = { fg = fg, bg = bg },
   git = { fg = fg, bg = bg },
   extension = { fg = fg, bg = bg },

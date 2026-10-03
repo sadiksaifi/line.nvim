@@ -1,6 +1,7 @@
 local M = {}
 
 -- VS Code theme - inspired by VS Code dark theme
+---@type LineColors
 M.colors = {
   statusline = { fg = "#cccccc", bg = "#1e1e1e" },
   normal = { fg = "#1e1e1e", bg = "#007acc" },
@@ -14,6 +15,8 @@ M.colors = {
   file = { fg = "#cccccc", bg = "#1e1e1e" },
   diagnostic_error = { fg = "#f44747", bg = "#1e1e1e" },
   diagnostic = { fg = "#dcdcaa", bg = "#1e1e1e" },
+  diagnostic_info = { fg = "#3794ff", bg = "#1e1e1e" },
+  diagnostic_hint = { fg = "#4ec9b0", bg = "#1e1e1e" },
   lsp = { fg = "#007acc", bg = "#1e1e1e" },
   git = { fg = "#4ec9b0", bg = "#1e1e1e" },
   extension = { fg = "#1e1e1e", bg = "#c586c0" },

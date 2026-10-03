@@ -1,6 +1,7 @@
 local M = {}
 
 -- Gruvbox theme - inspired by gruvbox colorscheme
+---@type LineColors
 M.colors = {
   statusline = { fg = "#ebdbb2", bg = "#3c3836" },
   normal = { fg = "#3c3836", bg = "#83a598" },
@@ -14,6 +15,8 @@ M.colors = {
   file = { fg = "#ebdbb2", bg = "#3c3836" },
   diagnostic_error = { fg = "#fb4934", bg = "#3c3836" },
   diagnostic = { fg = "#fe8019", bg = "#3c3836" },
+  diagnostic_info = { fg = "#83a598", bg = "#3c3836" },
+  diagnostic_hint = { fg = "#8ec07c", bg = "#3c3836" },
   lsp = { fg = "#83a598", bg = "#3c3836" },
   git = { fg = "#b8bb26", bg = "#3c3836" },
   extension = { fg = "#3c3836", bg = "#d3869b" },

@@ -2,101 +2,67 @@ local M = {}
 
 local themes = require("line.themes")
 
----Set up standard User highlight groups for statusline components
----This follows the pattern used by lualine.nvim and other statusline plugins
----@param colors table Theme colors to use for highlight groups
-function M.setup_user_highlights(colors)
-  -- User1-User9 are standard Neovim highlight groups for statusline
-  -- We use the theme colors instead of hardcoded values
-  
-  -- User1: Normal mode
-  vim.api.nvim_set_hl(0, "User1", {
-    fg = colors.normal.fg,
-    bg = colors.normal.bg,
-    bold = true,
-  })
-  
-  -- User2: Insert mode
-  vim.api.nvim_set_hl(0, "User2", {
-    fg = colors.insert.fg,
-    bg = colors.insert.bg,
-    bold = true,
-  })
-  
-  -- User3: Visual mode
-  vim.api.nvim_set_hl(0, "User3", {
-    fg = colors.visual.fg,
-    bg = colors.visual.bg,
-    bold = true,
-  })
-  
-  -- User4: Replace mode
-  vim.api.nvim_set_hl(0, "User4", {
-    fg = colors.replace.fg,
-    bg = colors.replace.bg,
-    bold = true,
-  })
-  
-  -- User5: Command mode
-  vim.api.nvim_set_hl(0, "User5", {
-    fg = colors.command.fg,
-    bg = colors.command.bg,
-    bold = true,
-  })
-  
-  -- User6: Select mode
-  vim.api.nvim_set_hl(0, "User6", {
-    fg = colors.select.fg,
-    bg = colors.select.bg,
-    bold = true,
-  })
-  
-  -- User7: Shell mode
-  vim.api.nvim_set_hl(0, "User7", {
-    fg = colors.shell.fg,
-    bg = colors.shell.bg,
-    bold = true,
-  })
-  
-  -- User8: Terminal mode (same as shell)
-  vim.api.nvim_set_hl(0, "User8", {
-    fg = colors.terminal.fg,
-    bg = colors.terminal.bg,
-    bold = true,
-  })
-  
-  -- User9: Reserved for future use
-  vim.api.nvim_set_hl(0, "User9", {
-    fg = colors.separator.fg,
-    bg = colors.statusline.bg,
-  })
-end
+-- Highlight group for each color key.
+local groups = {
+  statusline = "LineStatusline",
+  separator = "LineSeparator",
+  normal = "LineModeNormal",
+  insert = "LineModeInsert",
+  visual = "LineModeVisual",
+  replace = "LineModeReplace",
+  command = "LineModeCommand",
+  select = "LineModeSelect",
+  shell = "LineModeShell",
+  terminal = "LineModeTerminal",
+  file = "LineFile",
+  file_dir = "LineFileDir",
+  lsp = "LineLsp",
+  diagnostic_error = "LineDiagnosticError",
+  diagnostic = "LineDiagnostic",
+  diagnostic_info = "LineDiagnosticInfo",
+  diagnostic_hint = "LineDiagnosticHint",
+  git = "LineGit",
+  extension = "LineExtension",
+  inactive = "LineInactive",
+}
 
----Merge theme colors with user overrides
----@param theme_name string|nil Theme name to use
----@param user_colors table|nil User color overrides
----@return table Merged color configuration
+---Merge theme colors with user overrides. Unknown theme names fall back to "default".
+---@param theme_name string?
+---@param user_colors LineColors?
+---@return LineColors
 function M.merge(theme_name, user_colors)
-  local result
-  
-  -- Get base colors from theme
-  if theme_name and themes.get_theme(theme_name) then
-    result = vim.deepcopy(themes.get_theme(theme_name).colors)
-  else
-    -- Default to default theme
-    result = vim.deepcopy(themes.get_theme("default").colors)
-  end
-  
-  -- Apply user color overrides if provided
-  if user_colors and type(user_colors) == "table" then
-    for k, v in pairs(user_colors) do
-      if result[k] and type(v) == "table" then
-        result[k] = vim.tbl_extend("force", result[k], v)
-      end
+  local theme = theme_name and themes.get_theme(theme_name) or themes.get_theme("default")
+  ---@cast theme -nil
+  local result = vim.deepcopy(theme.colors)
+
+  for key, value in pairs(user_colors or {}) do
+    if groups[key] and type(value) == "table" then
+      result[key] = vim.tbl_extend("force", result[key] or {}, value)
     end
   end
-  
+
+  -- Keys that custom or older themes may omit.
+  result.diagnostic_info = result.diagnostic_info or result.lsp
+  result.diagnostic_hint = result.diagnostic_hint or result.git
+  result.inactive = result.inactive or { fg = result.separator.fg, bg = result.statusline.bg }
+  result.file_dir = result.file_dir or { fg = result.separator.fg, bg = result.file.bg }
+
   return result
+end
+
+---Define the Line* highlight groups from merged colors.
+---@param colors LineColors
+function M.apply(colors)
+  for key, group in pairs(groups) do
+    local c = colors[key]
+    if c then
+      vim.api.nvim_set_hl(
+        0,
+        group,
+        { fg = c.fg, bg = c.bg, bold = key ~= "inactive" and key ~= "file_dir" }
+      )
+    end
+  end
 end
 
 return M

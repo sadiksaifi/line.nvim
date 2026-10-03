@@ -1,6 +1,7 @@
 local M = {}
 
 -- Tokyo Night theme - inspired by tokyonight colorscheme
+---@type LineColors
 M.colors = {
   statusline = { fg = "#a9b1d6", bg = "#1a1b26" },
   normal = { fg = "#1a1b26", bg = "#7aa2f7" },
@@ -14,6 +15,8 @@ M.colors = {
   file = { fg = "#a9b1d6", bg = "#1a1b26" },
   diagnostic_error = { fg = "#f7768e", bg = "#1a1b26" },
   diagnostic = { fg = "#e0af68", bg = "#1a1b26" },
+  diagnostic_info = { fg = "#0db9d7", bg = "#1a1b26" },
+  diagnostic_hint = { fg = "#1abc9c", bg = "#1a1b26" },
   lsp = { fg = "#7aa2f7", bg = "#1a1b26" },
   git = { fg = "#9ece6a", bg = "#1a1b26" },
   extension = { fg = "#1a1b26", bg = "#bb9af7" },

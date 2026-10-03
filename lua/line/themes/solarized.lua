@@ -1,6 +1,7 @@
 local M = {}
 
 -- Solarized theme - inspired by solarized colorscheme
+---@type LineColors
 M.colors = {
   statusline = { fg = "#93a1a1", bg = "#073642" },
   normal = { fg = "#073642", bg = "#268bd2" },
@@ -14,6 +15,8 @@ M.colors = {
   file = { fg = "#93a1a1", bg = "#073642" },
   diagnostic_error = { fg = "#dc322f", bg = "#073642" },
   diagnostic = { fg = "#b58900", bg = "#073642" },
+  diagnostic_info = { fg = "#268bd2", bg = "#073642" },
+  diagnostic_hint = { fg = "#2aa198", bg = "#073642" },
   lsp = { fg = "#268bd2", bg = "#073642" },
   git = { fg = "#859900", bg = "#073642" },
   extension = { fg = "#073642", bg = "#d33682" },

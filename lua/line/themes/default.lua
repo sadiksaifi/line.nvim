@@ -1,6 +1,7 @@
 local M = {}
 
 -- Default theme - modern, elegant color palette
+---@type LineColors
 M.colors = {
   statusline = { fg = "#cdd6f4", bg = "#1e1e2e" },
   normal = { fg = "#1e1e2e", bg = "#89b4fa" },
@@ -14,6 +15,8 @@ M.colors = {
   file = { fg = "#cdd6f4", bg = "#1e1e2e" },
   diagnostic_error = { fg = "#f38ba8", bg = "#1e1e2e" },
   diagnostic = { fg = "#f9e2af", bg = "#1e1e2e" },
+  diagnostic_info = { fg = "#89dceb", bg = "#1e1e2e" },
+  diagnostic_hint = { fg = "#94e2d5", bg = "#1e1e2e" },
   lsp = { fg = "#89b4fa", bg = "#1e1e2e" },
   git = { fg = "#a6e3a1", bg = "#1e1e2e" },
   extension = { fg = "#1e1e2e", bg = "#cba6f7" },

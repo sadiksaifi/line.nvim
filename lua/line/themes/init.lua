@@ -1,33 +1,51 @@
 local M = {}
 
--- Theme registry
-local themes = {
-  default = require("line.themes.default"),
-  rosepine = require("line.themes.rosepine"),
-  catpuccin = require("line.themes.catpuccin"),
-  tokyonight = require("line.themes.tokyonight"),
-  gruvbox = require("line.themes.gruvbox"),
-  vscode = require("line.themes.vscode"),
-  dracula = require("line.themes.dracula"),
-  solarized = require("line.themes.solarized"),
-  boring = require("line.themes.boring"),
+-- Theme modules load on first use, so only the selected theme is required.
+local names = {
+  "auto",
+  "default",
+  "rosepine",
+  "catppuccin",
+  "tokyonight",
+  "gruvbox",
+  "vscode",
+  "dracula",
+  "solarized",
+  "boring",
 }
 
----Get theme colors by name
+local aliases = {
+  catpuccin = "catppuccin",
+}
+
+---Resolve a theme name, following aliases.
 ---@param theme_name string
----@return table|nil
-function M.get_theme(theme_name)
-  return themes[theme_name]
+---@return string?
+local function resolve(theme_name)
+  theme_name = aliases[theme_name] or theme_name
+  if vim.list_contains(names, theme_name) then
+    return theme_name
+  end
 end
 
----Get all available theme names
+---Get a theme by name. The "auto" theme is generated from the active colorscheme on every call.
+---@param theme_name string
+---@return LineTheme?
+function M.get_theme(theme_name)
+  local name = resolve(theme_name)
+  if not name then
+    return nil
+  end
+  if name == "auto" then
+    return { colors = require("line.themes.auto").generate() }
+  end
+  return require("line.themes." .. name)
+end
+
+---Get all available theme names.
 ---@return string[]
 function M.get_available_themes()
-  local theme_names = {}
-  for name, _ in pairs(themes) do
-    table.insert(theme_names, name)
-  end
-  return theme_names
+  return vim.list_slice(names)
 end
 
 return M

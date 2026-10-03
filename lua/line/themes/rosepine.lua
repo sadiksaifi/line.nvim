@@ -1,6 +1,7 @@
 local M = {}
 
 -- Rose Pine theme - inspired by rose-pine colorscheme
+---@type LineColors
 M.colors = {
   statusline = { fg = "#e0def4", bg = "#26233a" },
   normal = { fg = "#26233a", bg = "#9ccfd8" },
@@ -14,6 +15,8 @@ M.colors = {
   file = { fg = "#e0def4", bg = "#26233a" },
   diagnostic_error = { fg = "#eb6f92", bg = "#26233a" },
   diagnostic = { fg = "#f6c177", bg = "#26233a" },
+  diagnostic_info = { fg = "#9ccfd8", bg = "#26233a" },
+  diagnostic_hint = { fg = "#c4a7e7", bg = "#26233a" },
   lsp = { fg = "#9ccfd8", bg = "#26233a" },
   git = { fg = "#c4a7e7", bg = "#26233a" },
   extension = { fg = "#26233a", bg = "#9ccfd8" },

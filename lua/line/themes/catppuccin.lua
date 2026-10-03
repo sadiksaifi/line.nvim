@@ -1,6 +1,7 @@
 local M = {}
 
 -- Catppuccin theme - inspired by catppuccin colorscheme
+---@type LineColors
 M.colors = {
   statusline = { fg = "#cdd6f4", bg = "#11111b" },
   normal = { fg = "#11111b", bg = "#89b4fa" },
@@ -14,6 +15,8 @@ M.colors = {
   file = { fg = "#cdd6f4", bg = "#11111b" },
   diagnostic_error = { fg = "#f38ba8", bg = "#11111b" },
   diagnostic = { fg = "#f9e2af", bg = "#11111b" },
+  diagnostic_info = { fg = "#89dceb", bg = "#11111b" },
+  diagnostic_hint = { fg = "#94e2d5", bg = "#11111b" },
   lsp = { fg = "#89b4fa", bg = "#11111b" },
   git = { fg = "#a6e3a1", bg = "#11111b" },
   extension = { fg = "#11111b", bg = "#cba6f7" },

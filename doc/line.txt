@@ -21,9 +21,10 @@ written in pure Lua. This plugin provides a basic set of essential features
 without overwhelming configuration options.
 
 The statusline caches per-buffer data (paths, diagnostics, LSP clients, git
-branch) and updates it from autocommands, so drawing it does no filesystem
-or process work. The git branch is read from `.git/HEAD` without spawning
-`git`.
+branch). Drawing it only reads these caches. Project root and `.git/HEAD`
+lookups run in autocommands such as |BufWinEnter| and |FocusGained|, or in a
+scheduled callback when a cache is empty, never while drawing. The git branch
+is read from `.git/HEAD` without spawning `git`.
 
 ==============================================================================
 REQUIREMENTS						*line-requirements*

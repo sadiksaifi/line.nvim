@@ -15,6 +15,8 @@ local timer
 ---@type string[]
 local ignored = {}
 
+local work_done_kinds = { begin = true, report = true, ["end"] = true }
+
 ---@param buf integer
 ---@return string
 function M.names(buf)
@@ -98,10 +100,16 @@ end
 ---@param data { client_id: integer, params: lsp.ProgressParams }
 function M.on_progress(data)
   local value = data.params and data.params.value
-  if type(value) ~= "table" then
+  -- Partial results also arrive through $/progress but are not work-done progress: they have no
+  -- kind and never send "end".
+  if type(value) ~= "table" or not work_done_kinds[value.kind] then
     return
   end
   local id, token = data.client_id, data.params.token
+  local client = vim.lsp.get_client_by_id(id)
+  if not client or vim.list_contains(ignored, client.name) then
+    return
+  end
   if value.kind == "end" then
     local tokens = progress[id]
     if tokens then

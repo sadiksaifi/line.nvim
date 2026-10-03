@@ -102,22 +102,27 @@ end
 
 ---@type table<integer, string> buffer -> escaped display path
 local path_cache = {}
+---@type table<integer, boolean> buffers with a scheduled path lookup
+local path_queued = {}
 
 ---Display name of a terminal buffer: the command it runs, without directories.
 ---@param name string
 ---@return string
 local function terminal_name(name)
-  local cmd = name:match("^term://.-//%d+:(.*)$")
-  if not cmd or cmd == "" then
+  local cmd = vim.trim(name:match("^term://.-//%d+:(.*)$") or "")
+  local program, args = cmd:match("^(%S+)(.*)$")
+  if not program then
     return "terminal"
   end
-  local program, args = cmd:match("^(%S+)(.*)$")
   return vim.fs.basename(program) .. args
 end
 
+---Compute and cache the display path. Finding the project root does filesystem work, so rendering
+---calls this with `lookup` false and gets a path relative to the current directory instead.
 ---@param buf integer
+---@param lookup boolean
 ---@return string
-local function display_path(buf)
+local function display_path(buf, lookup)
   local cached = path_cache[buf]
   if cached then
     return cached
@@ -127,7 +132,7 @@ local function display_path(buf)
   local path
   if name == "" then
     path = ""
-  elseif buftype == "terminal" then
+  elseif buftype == "terminal" or vim.startswith(name, "term://") then
     path = terminal_name(name)
   elseif buftype == "help" then
     path = vim.fs.basename(name)
@@ -137,6 +142,18 @@ local function display_path(buf)
     path = scheme .. ": " .. vim.fn.fnamemodify(rest, ":~:.")
   elseif buftype ~= "" then
     path = vim.fs.basename(name)
+  elseif not lookup then
+    if not path_queued[buf] then
+      path_queued[buf] = true
+      vim.schedule(function()
+        path_queued[buf] = nil
+        M.prepare(buf)
+        if api.nvim_buf_is_valid(buf) then
+          api.nvim__redraw({ buf = buf, statusline = true })
+        end
+      end)
+    end
+    return escape(vim.fn.fnamemodify(name, ":~:."))
   else
     local root = vim.fs.root(buf, config.root_markers)
     if root and root ~= vim.uv.os_homedir() then
@@ -179,7 +196,7 @@ function M.file_path(buf, win, _, short, inactive)
   if vim.bo[buf].buftype == "quickfix" then
     path = escape(vim.w[win].quickfix_title or "")
   else
-    path = display_path(buf)
+    path = display_path(buf, false)
   end
   if path == "" then
     return ""
@@ -208,28 +225,62 @@ local diagnostic_parts = {
   { severity.HINT, "LineDiagnosticHint", "hint" },
 }
 
----@type table<integer, string> buffer -> rendered component
+---@class LineDiagnosticCache
+---@field counts table<integer, table<integer, integer>> namespace -> severity -> count
+---@field state? string Enabled namespaces when `text` was rendered
+---@field text? string
+
+---@type table<integer, LineDiagnosticCache>
 local diagnostic_cache = {}
 
 ---@param buf integer
 ---@return string
 function M.diagnostics(buf)
-  local cached = diagnostic_cache[buf]
-  if cached then
-    return cached
+  local cache = diagnostic_cache[buf]
+  if not cache then
+    local counts = {}
+    for _, d in ipairs(vim.diagnostic.get(buf)) do
+      local ns = counts[d.namespace] or {}
+      counts[d.namespace] = ns
+      ns[d.severity] = (ns[d.severity] or 0) + 1
+    end
+    cache = { counts = counts }
+    diagnostic_cache[buf] = cache
   end
-  local counts = vim.diagnostic.count(buf, { enabled = true })
+  if not next(cache.counts) then
+    return ""
+  end
+
+  -- vim.diagnostic.enable() fires no event, so check which namespaces are enabled on every render.
+  local state = ""
+  for ns in pairs(cache.counts) do
+    state = state .. (vim.diagnostic.is_enabled({ bufnr = buf, ns_id = ns }) and "1" or "0")
+  end
+  if cache.state == state then
+    return cache.text
+  end
+
+  local totals = {}
+  local i = 0
+  for _, by_severity in pairs(cache.counts) do
+    i = i + 1
+    if state:byte(i) == 49 then -- "1"
+      for sev, count in pairs(by_severity) do
+        totals[sev] = (totals[sev] or 0) + count
+      end
+    end
+  end
   local parts = {}
   for _, part in ipairs(diagnostic_parts) do
-    local count = counts[part[1]]
+    local count = totals[part[1]]
     if count and count > 0 then
       parts[#parts + 1] =
         string.format("%%#%s#%s %d", part[2], escape(config.icons[part[3]]), count)
     end
   end
-  cached = #parts > 0 and table.concat(parts, " ") .. RESET or ""
-  diagnostic_cache[buf] = cached
-  return cached
+  cache.state = state
+  cache.text = #parts > 0 and table.concat(parts, " ") .. RESET or ""
+  return cache.text
 end
 
 -- LSP -----------------------------------------------------------------------
@@ -345,9 +396,19 @@ function M.invalidate_path(buf)
   end
 end
 
+---Compute the buffer's display path, including the project root lookup. Call it from event
+---handlers, never while rendering.
+---@param buf integer
+function M.prepare(buf)
+  if api.nvim_buf_is_valid(buf) then
+    display_path(buf, true)
+  end
+end
+
 ---@param buf integer
 function M.forget(buf)
   path_cache[buf] = nil
+  path_queued[buf] = nil
   diagnostic_cache[buf] = nil
 end
 
@@ -356,6 +417,7 @@ function M.setup(opts)
   config = opts
   mode_cache = {}
   path_cache = {}
+  path_queued = {}
   diagnostic_cache = {}
 end
 

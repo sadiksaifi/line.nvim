@@ -72,6 +72,9 @@ function M.render()
   local width = global and vim.o.columns or api.nvim_win_get_width(win)
 
   if win ~= current and not global then
+    if not show_file then
+      return "%#LineInactive#"
+    end
     local file = components.file_path(buf, win, width, false, true)
     if cells(file) > width then
       file = components.file_path(buf, win, width, true, true)
@@ -197,6 +200,18 @@ local function build_layout(opts)
   end
 end
 
+---Look up paths, and git data when enabled, for the buffers shown in windows.
+---@param with_git boolean?
+local function prepare_visible(with_git)
+  local components = require("line.components")
+  for _, win in ipairs(api.nvim_list_wins()) do
+    components.prepare(api.nvim_win_get_buf(win))
+  end
+  if with_git then
+    require("line.git").refresh_visible()
+  end
+end
+
 ---@param opts LineOptions
 local function create_autocmds(opts)
   local components = require("line.components")
@@ -212,20 +227,41 @@ local function create_autocmds(opts)
 
   on("ColorScheme", M.refresh)
 
+  local git = require("line.git")
+
+  -- Look up paths and git data before the window is drawn, so rendering only reads caches.
+  on({ "BufWinEnter", "BufEnter" }, function(args)
+    components.prepare(args.buf)
+    if enabled.git then
+      git.refresh(args.buf)
+    end
+  end)
+
   on("BufWipeout", function(args)
     components.forget(args.buf)
     require("line.lsp").invalidate(args.buf)
-    require("line.git").invalidate(args.buf)
+    git.forget(args.buf)
+  end)
+
+  -- The buffer becomes a terminal after BufEnter has already cached its path.
+  on("TermOpen", function(args)
+    components.invalidate_path(args.buf)
+    components.prepare(args.buf)
   end)
 
   on("BufFilePost", function(args)
     components.invalidate_path(args.buf)
-    require("line.git").invalidate(args.buf)
+    components.prepare(args.buf)
+    git.invalidate(args.buf)
+    if enabled.git then
+      git.refresh(args.buf)
+    end
   end)
 
   on("DirChanged", function()
     components.invalidate_path()
-    require("line.git").invalidate()
+    git.invalidate()
+    prepare_visible(enabled.git)
     redraw()
   end)
 
@@ -276,13 +312,12 @@ local function create_autocmds(opts)
   end
 
   if enabled.git then
-    local git = require("line.git")
-    on("BufEnter", function(args)
-      git.refresh(args.buf)
-    end)
+    -- Events after which HEAD may have changed outside this buffer.
     on({ "FocusGained", "ShellCmdPost", "TermLeave" }, function()
-      git.invalidate_heads()
-      redraw()
+      git.reload()
+    end)
+    on("BufWritePost", function(args)
+      git.refresh(args.buf)
     end)
   end
 
@@ -316,11 +351,12 @@ function M.setup(opts)
 
   require("line.components").setup(options)
   require("line.lsp").setup(options.lsp.ignored_clients)
-  require("line.git").invalidate()
+  require("line.git").reset()
 
   M.refresh()
   build_layout(options)
   create_autocmds(options)
+  prepare_visible(options.components.git)
 
   -- Keep the quickfix ftplugin from replacing this statusline with its own.
   if vim.g.qf_disable_statusline == nil then
